@@ -36,12 +36,13 @@ def pca_on_flow(flow_uv):
 
 def knn_then_pca(drifter_latlon, flow_field_snapshot, k):
     """
-    :param drifter_latlon:
+    :param drifter_latlon: the latitude and longitude of the drifter, [1, 2]
     :param flow_field_snapshot: a snapshot of the flow field including latlon and u v vels, [H, W, 4]
-    :param k:
+    :param k: k nearest neighbors
 
     :return: reconstructed_flow: the reconstructed u_vel and v_vel, [2,]
     """
+    drifter_latlon = drifter_latlon.reshape([1,2])
     flow_field_latlon = flow_field_snapshot[:, :, 0:2]
     flow_field_uv = flow_field_snapshot[:, :, 2:4]
     ind_flat, ind_2d = knn_on_flow(drifter_latlon, flow_field_latlon, k)
