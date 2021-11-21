@@ -34,7 +34,7 @@ def compute_validation_loss(ode_train, val_path, step_skip):
 def sample_and_grow(ode_train, traj_list, epochs, LR, lookahead, plot_freq=50,
                     save_path=None, step_skip=1, mode="planar"):
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, ode_train.parameters()), lr=LR)
-    for i in tqdm.tqdm(range(epochs)):
+    for i in tqdm.tqdm(range(epochs), desc="Training progress", position=0, leave=True):
         for idx, true_traj in enumerate(traj_list):
             n_segments, _, n_state = true_traj.size()
             true_segments_list = []
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     EPOCHs = 2000  # No. of epochs to optimize
     LOOKAHEAD = 2  # alpha, the number of steps to lookahead
     name = "lookahead_" + str(LOOKAHEAD - 1)
-    LR = 0.01  # optimization step size
+    LR = 0.001  # optimization step size
     plot_freq = 10
 
     sample_and_grow(ode_train, train_traj_list, EPOCHs, LR, LOOKAHEAD,
