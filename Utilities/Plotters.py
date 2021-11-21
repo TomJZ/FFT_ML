@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
 
 
 def visualize_flow(flow_data, snapshot):
@@ -48,6 +47,7 @@ def visualize_pca(flow_data, ind_flat, snapshot, recon_vel, drifter_ts=None):
                    recon_vel[0], recon_vel[1], color='red',
                    label='reconstructed vel')  # recon vel plotted for a drifter
         ax2.plot(site_lon, site_lat, label='true traj', marker='.', c='green')  # true time series path of a drifter
+
 
     plt.legend()
     plt.show()
