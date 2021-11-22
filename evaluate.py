@@ -7,6 +7,9 @@ import torch
 
 def compute_traj_loss(drifter_id, plot_traj=False, model_path=None, true_traj=None):
     """
+    high level evaluation function, not general
+    """
+    """
     Loading Drifter Prediction Data
     """
     pred_traj1_label = "nowcast_integrator"
@@ -32,8 +35,8 @@ def compute_traj_loss(drifter_id, plot_traj=False, model_path=None, true_traj=No
     duration = 3  # how many days ahead to plot
     drifter_ts = drifter_data_all[(start_day - 1) * 48:(start_day - 1) * 48 + duration * 48, drifter_id, :]
     if plot_traj:  # plotting all trajs
-        traj_ls = [pred_traj1, pred_traj2, pred_traj3]
-        traj_label_ls = [pred_traj1_label, pred_traj2_label, pred_traj3_label]
+        traj_ls = [drifter_data_all[:, drifter_id, :], pred_traj1, pred_traj2, pred_traj3]
+        traj_label_ls = ["full path", pred_traj1_label, pred_traj2_label, pred_traj3_label]
         if model_path is not None and true_traj is not None:
             node_traj = eval_node_model(model_path, true_traj)
             traj_ls.append(node_traj)
@@ -62,25 +65,26 @@ def eval_node_model(model_path, true_traj):
     val_len, _, state_dim = val_set.shape
     with torch.no_grad():
         curr_state = val_set[0]
-        curr_latlon = curr_state[:, 2:]
+        curr_latlon = curr_state[:, -2:]
         pred_traj = [curr_latlon]
-        for j in range(val_len):
-            # print(curr_state.shape)
-            next_state = node_model(curr_state, Tensor([0, 1]), return_whole_sequence=True).squeeze()
-            next_latlon = next_state[-1, 2:].unsqueeze(0)
+        for j in range(val_len-1):
+            next_state = node_model(curr_state, Tensor([0., 1.]), return_whole_sequence=True).squeeze()
+            next_latlon = next_state[-1, -2:].unsqueeze(0)
             pred_traj.append(next_latlon)
-            # print(val_set[j, :, :2].shape, next_latlon.shape)
-            curr_state = torch.cat([val_set[j, :, :2], next_latlon],1)
+            curr_state = torch.cat([val_set[j+1, :, :-2], next_latlon], 1)
         pred_traj = torch.cat(pred_traj)
-        print(pred_traj.shape)
     return pred_traj.detach().numpy()
 
 
 if __name__ == '__main__':
-    drifter_id = 52
-    model_path = 'NODE/saved_models/drifter_relu.pth'
-    true_traj_path = 'Data/training_data/train_data_nowcast_drifter_' + str(drifter_id) + '_knn_10.npy'
-    true_traj = np.load(true_traj_path)[336:]
+    drifter_id = 1
+    pred_start_idx = 336  # 336
+    with_day = 3  # number of days of flow field in training data
+    # model_path = 'NODE/saved_models/drifter_' + str(drifter_id) + '_tanh.pth'
+    # true_traj_path = 'Data/training_data/train_data_nowcast_drifter_' + str(drifter_id) + '_knn_10.npy'
+    model_path = 'NODE/saved_models/drifter_' + str(drifter_id) + '_tanh_' + str(with_day) +'day.pth'
+    true_traj_path = 'Data/training_data/with_' + str(with_day) + 'days_flow/train_data_nowcast_drifter_' + str(drifter_id) + '_knn_10.npy'
+    true_traj = np.load(true_traj_path)[pred_start_idx:]
 
     # Computing traj loss from three different field approaches
     n_err_total = 0

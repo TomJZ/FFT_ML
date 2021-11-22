@@ -109,7 +109,7 @@ def predict_with_whole_field(drifter_id, k_neighbor, start_day, flow_data_path, 
     return drifter_ts, pred_traj
 
 
-def generate_training_data(drifter_id, k_neighbor, flow_data_path, flow_time_path):
+def generate_training_data_1day(drifter_id, k_neighbor, flow_data_path, flow_time_path):
     """
     :param drifter_id: int, the id of the drifter, starting from 0
     :param k_neighbor: int, k nearest neighbor
@@ -183,6 +183,74 @@ def generate_training_data(drifter_id, k_neighbor, flow_data_path, flow_time_pat
 
     return training_data
 
+def generate_training_data_3day(drifter_id, k_neighbor, flow_data_path, flow_time_path):
+    """
+    :param drifter_id: int, the id of the drifter, starting from 0
+    :param k_neighbor: int, k nearest neighbor
+    :param flow_data_path: string, the path where the flow is loaded, the flow is [time_len, lat_size, lon_size, 4]
+    :param flow_time_path: string, the path where the time is loaded, 1D array
+    :return: training data
+    """
+    """
+    Loading All Drifter Location Data
+    """
+    drifter_data_all = read_all_drifter_data()
+    drifter_ts = drifter_data_all[::2, drifter_id, :]  # the time series path of a single drifter
+
+    print("Drifter time series size: ", drifter_ts.shape)
+    max_lat = np.nanmax(drifter_ts[:, 0]) + 3
+    min_lat = np.nanmin(drifter_ts[:, 0]) - 3
+    max_lon = np.nanmax(drifter_ts[:, 1]) + 3
+    min_lon = np.nanmin(drifter_ts[:, 1]) - 3
+
+    """
+    Loading Ocean Flow Data
+    """
+    flow_data_all = read_flow_data(flow_data_path)
+
+    flow_data = flow_data_all
+    flow_data_all[flow_data_all > 1e20] = 1e5
+    #flow_data[flow_data == 0] = 1e10
+
+    max_lat_idx = np.argmin(flow_data_all[0, :, 0, 0] < max_lat)
+    min_lat_idx = np.argmax(flow_data_all[0, :, 0, 0] > min_lat)
+    max_lon_idx = np.argmin(flow_data_all[0, 0, :, 1] < max_lon)
+    min_lon_idx = np.argmax(flow_data_all[0, 0, :, 1] > min_lon)
+    if max_lat_idx == 0:
+        max_lat_idx = len(flow_data_all[0, :, 0, 0]) - 1  # if max lat is larger than all flow lat
+    if max_lon_idx == 0:
+        max_lon_idx = len(flow_data_all[0, 0, :, 1]) - 1  # if max lat is larger than all flow lat
+    # cropping flow field
+    flow_data = flow_data[:, min_lat_idx:max_lat_idx, min_lon_idx:max_lon_idx, :]
+    print("\nFlow data has size: ", flow_data.shape)
+
+    """
+    KNN PCA
+    """
+    training_data = []
+    last_good_loc = np.array([[0, 0]]).T
+    print("Running KNN-PCA and Generating Training Data: ")
+    for i in tqdm.tqdm(range(len(flow_data))):
+        try:
+            drifter_location = drifter_ts[i].reshape([1, -1])
+        except IndexError:
+            print("max index in drifter ts is: ", i)
+            break
+
+        recon_vel0 = knn_then_pca(drifter_location, flow_data[i], k_neighbor)
+        recon_vel1 = knn_then_pca(drifter_location, flow_data[i], k_neighbor) if i == 0 else knn_then_pca(drifter_location, flow_data[i-1], k_neighbor)
+        recon_vel2 = knn_then_pca(drifter_location, flow_data[i], k_neighbor) if i == len(flow_data)-1 else knn_then_pca(drifter_location, flow_data[i+1], k_neighbor)
+        training_point = np.concatenate([recon_vel0, recon_vel1, recon_vel2, drifter_location.reshape(-1)])
+        training_data.append(training_point)
+
+    training_data = np.array(training_data)
+
+    save_name = "Data/training_data/with_3days_flow/train_data_nowcast_drifter_" + str(drifter_id) + "_knn_" + str(k_neighbor) + ".npy"
+    with open(save_name, 'wb') as f:
+        np.save(f, training_data)
+
+    return training_data
+
 if __name__ == "__main__":
     '''
     # choose from "transformer", "forecast", "nowcast"
@@ -205,11 +273,11 @@ if __name__ == "__main__":
     start_day = 1
     flow_data_path = "Data/flow/noaa_nowcast_data_nov_2_to_nov_19.npy"
     flow_time_path = "Data/flow/noaa_nowcast_times_nov_2_to_nov_19.npy"
-    drifter_ids = np.arange(93)
+    drifter_ids = np.arange(93)  # all drifter ids
     for _, drifter_id in enumerate(drifter_ids):
         print("processing drifter:", drifter_id)
         try:
-            training_data = generate_training_data(drifter_id, k_neighbor, flow_data_path, flow_time_path)
+            training_data = generate_training_data_3day(drifter_id, k_neighbor, flow_data_path, flow_time_path)
         except:
             continue
     # true_traj, pred_traj = predict_with_whole_field(drifter_id, k_neighbor, start_day, flow_data_path, flow_time_path)

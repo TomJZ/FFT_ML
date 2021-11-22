@@ -108,7 +108,7 @@ def compare_trajs(true_traj, pred_traj_ls=None, pred_label_ls=None, plot_lim=Non
     plt.show()
 
 
-def visualize_training_data(training_traj):
+def visualize_training_data(training_traj, flow_data_path):
     """
     :param training_traj: [time_len, 4]
     """
@@ -118,15 +118,41 @@ def visualize_training_data(training_traj):
     ax2.quiver(training_traj[:, 3], training_traj[:, 2],
                training_traj[:, 1], training_traj[:, 0], label='pca flow')  # entire flow field
 
+    """
+    Loading Ocean Flow Data
+    """
+    flow_data_all = read_flow_data(flow_data_path)
+    flow_data_all[flow_data_all > 1e20] = 0
+
+    min_lat = np.min(training_traj[:, 2])
+    max_lat = np.max(training_traj[:, 2])
+    min_lon = np.min(training_traj[:, 3])
+    max_lon = np.max(training_traj[:, 3])
+    max_lat_idx = np.argmin(flow_data_all[0, :, 0, 0] < max_lat)
+    min_lat_idx = np.argmax(flow_data_all[0, :, 0, 0] > min_lat)
+    max_lon_idx = np.argmin(flow_data_all[0, 0, :, 1] < max_lon)
+    min_lon_idx = np.argmax(flow_data_all[0, 0, :, 1] > min_lon)
+    if max_lat_idx == 0:
+        max_lat_idx = len(flow_data_all[0, :, 0, 0]) - 1  # if max lat is larger than all flow lat
+    if max_lon_idx == 0:
+        max_lon_idx = len(flow_data_all[0, 0, :, 1]) - 1  # if max lat is larger than all flow lat
+
+    snapshot = 0
+    flow_snapshot = flow_data_all[snapshot, min_lat_idx:max_lat_idx, min_lon_idx:max_lon_idx, :]
+    ax2.quiver(flow_snapshot[:, :, 1], flow_snapshot[:, :, 0],
+               flow_snapshot[:, :, 3], flow_snapshot[:, :, 2], label='flow field', color='grey')  # entire flow field
+
     plt.legend()
     plt.show()
 
 
 if __name__ == '__main__':
-    #training_data = np.load('../Data/training_data/train_data_nowcast_drifter_2_knn_10.npy')
-    #visualize_training_data(training_data)
-    #print(training_data.shape)
+    training_data = np.load('../Data/training_data/train_data_nowcast_drifter_1_knn_10.npy')
+    flow_data_path = "../Data/flow/noaa_nowcast_data_nov_2_to_nov_19.npy"
+    visualize_training_data(training_data, flow_data_path)
+    print(training_data.shape)
 
+    """
     cwd = os.getcwd()
     os.chdir(os.path.abspath(os.path.join(cwd, os.pardir)))
 
@@ -146,6 +172,9 @@ if __name__ == '__main__':
     compare_trajs(drifter_data_all[14*48:48*17, drifter_id],
                   [traj1, traj2, traj3],
                   [label1, label2, label3])
+    """
+
+
     '''
     """
     Loading Ocean Flow Data
