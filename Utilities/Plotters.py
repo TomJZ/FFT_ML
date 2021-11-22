@@ -77,27 +77,26 @@ def visualize_all_drifter(drifter_data_all, flow_data):
     plt.show()
 
 
-def compare_trajs(true_traj, pred_traj1=None, pred_traj1_label=None, pred_traj2=None, pred_traj2_label=None,
-                  pred_traj3=None, pred_traj3_label=None, plot_lim=None):
+def compare_trajs(true_traj, pred_traj_ls=None, pred_label_ls=None, plot_lim=None, title=None):
     """
     Compares multiple trajectories if provided
     :param pred_traj: [time_len, 2], the predicted trajectory
     :param true_traj: [time_len, 2], the true trajectory
     :return:
     """
+    assert(len(pred_traj_ls) == len(pred_label_ls))
     fig = plt.figure(figsize=(10, 5))
     ax = fig.add_subplot(1, 1, 1)
     ax.plot(true_traj[:, 1], true_traj[:, 0], label='true traj',
-            c='red', marker='.')  # true time series path of a drifter
-    if pred_traj1 is not None:
-        ax.plot(pred_traj1[:, 1], pred_traj1[:, 0], label=pred_traj1_label,
-                c='blue', marker='.')  # pred time series path of a drifter
-    if pred_traj2 is not None:
-        ax.plot(pred_traj2[:, 1], pred_traj2[:, 0], label=pred_traj2_label,
-                c='green', marker='.')  # pred time series path of a drifter
-    if pred_traj3 is not None:
-        ax.plot(pred_traj3[:, 1], pred_traj3[:, 0], label=pred_traj3_label,
-                c='black', marker='.')  # pred time series path of a drifter
+            c='black', marker='x')  # true time series path of a drifter
+    if pred_traj_ls is not None:
+        for i, pred_traj in enumerate(pred_traj_ls):
+            ax.plot(pred_traj[:, 1], pred_traj[:, 0],
+                    label=pred_label_ls[i], marker='.')  # pred time series path of a drifter
+
+    if title is not None:
+        ax.set_title(title)
+
     if plot_lim is not None:
         min_lon = plot_lim[0]
         max_lon = plot_lim[1]
@@ -132,7 +131,7 @@ if __name__ == '__main__':
     os.chdir(os.path.abspath(os.path.join(cwd, os.pardir)))
 
     drifter_data_all = read_all_drifter_data()
-    '''
+
     drifter_id = 67
     path1 = 'Data/predictions/drifter_' + str(drifter_id) + '_forecast_pred_traj.npy'
     path2 = 'Data/predictions/drifter_' + str(drifter_id) + '_nowcast_pred_traj.npy'
@@ -144,7 +143,9 @@ if __name__ == '__main__':
     traj2 = np.load(path2)
     traj3 = np.load(path3)
 
-    compare_trajs(drifter_data_all[14*48:48*17, drifter_id], traj1, label1, traj2, label2, traj3, label3)
+    compare_trajs(drifter_data_all[14*48:48*17, drifter_id],
+                  [traj1, traj2, traj3],
+                  [label1, label2, label3])
     '''
     """
     Loading Ocean Flow Data
@@ -156,3 +157,4 @@ if __name__ == '__main__':
     flow_data_all[flow_data_all > 1e20] = 0
     flow_data[flow_data == 0] = None
     visualize_all_drifter(drifter_data_all, flow_data)
+    '''

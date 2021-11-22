@@ -23,16 +23,15 @@ def compute_validation_loss(ode_train, val_path, step_skip):
             all_init.append(init_con)
             traj_segments_list.append(val_traj_segment)
         # concatenating all batches together
-        all_init = torch.cat(all_init).view(-1, 1, state_dim)
+        all_init = torch.cat(all_init).view(-1, 1, 4)
         z1 = ode_train(all_init.to(device), val_time_segment.to(device), return_whole_sequence=True).squeeze()
         obs1 = torch.cat(traj_segments_list, 1).to(device)
-        traj_dim = 13 if state_dim == 17 else 6
-        loss = F.mse_loss(z1[:, :, :traj_dim], obs1[:, :, :traj_dim])
+        loss = F.mse_loss(z1[:, :, 2:], obs1[:, :, 2:])
         return loss.item()
 
 
 def sample_and_grow(ode_train, traj_list, epochs, LR, lookahead, plot_freq=50,
-                    save_path=None, step_skip=1, mode="planar"):
+                    save_path=None, step_skip=1):
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, ode_train.parameters()), lr=LR)
     for i in tqdm.tqdm(range(epochs), desc="Training progress", position=0, leave=True):
         for idx, true_traj in enumerate(traj_list):
@@ -74,22 +73,14 @@ def sample_and_grow(ode_train, traj_list, epochs, LR, lookahead, plot_freq=50,
         optimizer.step()
 
         # validation
-        if mode == "planar":
-            val_loss = np.nan
-        else:
-            # print("computing val loss")
-            val_loss = compute_validation_loss(ode_train,
-                                               "Data/uncertain_params/traj_data_mpc_aerodrag_radius4.npy",
-                                               step_skip, mode)
-            val_loss_arr.append(val_loss)
+        val_loss = compute_validation_loss(ode_train, "Data/training_data/train_data_nowcast_drifter_3_knn_10.npy",
+                                           step_skip)
+        val_loss_arr.append(val_loss)
 
         if i % plot_freq == 0:
             if save_path is not None:
-                if mode == "planar":
-                    torch.save({'ode_train': ode_train, 'train_loss_arr': train_loss_arr}, save_path)
-                else:
-                    torch.save({'ode_train': ode_train, 'train_loss_arr': train_loss_arr, 'val_loss_arr': val_loss_arr},
-                               save_path)
+                torch.save({'ode_train': ode_train, 'train_loss_arr': train_loss_arr, 'val_loss_arr': val_loss_arr},
+                           save_path)
 
             # computing trajectory using the current model
             plot_title = "\nIteration: {0} Step Size: {1} No. of Points: {2} Lookahead: {3} LR: {4}\n    Training Loss: {5:.3e}\n    Validation Loss: {6:.3e}"
@@ -98,7 +89,10 @@ def sample_and_grow(ode_train, traj_list, epochs, LR, lookahead, plot_freq=50,
 
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    training_data_path_list = ["Data/training_data/train_data_nowcast_drifter_0_knn_10.npy"]
+    training_data_path_list = ["Data/training_data/train_data_nowcast_drifter_41_knn_10.npy",
+                               "Data/training_data/train_data_nowcast_drifter_52_knn_10.npy",
+                               "Data/training_data/train_data_nowcast_drifter_59_knn_10.npy",
+                               "Data/training_data/train_data_nowcast_drifter_1_knn_10.npy",]
     train_traj_list = []
     # concatenating all trajectories into a list
     for i, data_path in enumerate(training_data_path_list):
@@ -106,7 +100,8 @@ if __name__ == '__main__':
             train_set = np.load(f)
             print("Training traj {0} has shape: \n".format(i), train_set.shape)
         full_len = train_set.shape[0]
-        train_set = Tensor(train_set.reshape([full_len, -1]))
+        train_len = 336
+        train_set = Tensor(train_set.reshape([full_len, -1]))[:270]
         train_traj = train_set.detach().unsqueeze(1)
         # train_traj = train_traj + torch.randn_like(train_traj) * 0.00
         train_traj_list.append(train_traj)
@@ -122,13 +117,13 @@ if __name__ == '__main__':
     step_skip = 1  # number of interpolations between observations
     train_loss_arr = []
     val_loss_arr = []
-    save_path = None
+    save_path = 'NODE/saved_models/drifter_relu.pth'
     BATCH_SKIP = 1
-    EPOCHs = 2000  # No. of epochs to optimize
+    EPOCHs = 4000  # No. of epochs to optimize
     LOOKAHEAD = 2  # alpha, the number of steps to lookahead
     name = "lookahead_" + str(LOOKAHEAD - 1)
     LR = 0.001  # optimization step size
-    plot_freq = 10
+    plot_freq = 20
 
     sample_and_grow(ode_train, train_traj_list, EPOCHs, LR, LOOKAHEAD,
                     plot_freq=plot_freq, save_path=save_path, step_skip=step_skip)
