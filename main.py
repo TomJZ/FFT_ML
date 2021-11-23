@@ -163,11 +163,11 @@ def generate_training_data_1day(drifter_id, k_neighbor, flow_data_path, flow_tim
         except IndexError:
             print("max index in drifter ts is: ", i)
             break
-        # if not np.any(np.isnan(drifter_location)):
-        #    last_good_loc = drifter_location
-        # if np.any(np.isnan(drifter_location)):
-        #    print("nan in drifter location detected at index: ", i)
-        #    drifter_location = last_good_loc
+        if not np.any(np.isnan(drifter_location)):
+            last_good_loc = drifter_location
+        if np.any(np.isnan(drifter_location)):
+            print("nan in drifter location detected at index: ", i)
+            drifter_location = last_good_loc
 
         # print(drifter_location)
         # np.any(np.isnan(flow_data[i]))
@@ -279,11 +279,10 @@ if __name__ == "__main__":
     start_day = 1
     flow_data_path = "Data/flow/noaa_nowcast_data_nov_2_to_nov_22.npy"
     flow_time_path = "Data/flow/noaa_nowcast_times_nov_2_to_nov_22.npy"
-    drifter_ids = np.arange(93)  # all drifter ids
+    drifter_ids = [65]  # all drifter ids
     for _, drifter_id in enumerate(drifter_ids):
         print("processing drifter:", drifter_id)
-        try:
-            training_data = generate_training_data_1day(drifter_id, k_neighbor, flow_data_path, flow_time_path)
-        except:
-            continue
+
+        training_data = generate_training_data_1day(drifter_id, k_neighbor, flow_data_path, flow_time_path)
+
     # true_traj, pred_traj = predict_with_whole_field(drifter_id, k_neighbor, start_day, flow_data_path, flow_time_path)

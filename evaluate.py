@@ -1,3 +1,5 @@
+import numpy as np
+
 from Utilities.Plotters import *
 from data_processing import *
 from sklearn.metrics import mean_squared_error as mse
@@ -129,14 +131,14 @@ def eval_node_model_using_flow_field(model_path, initial_condition, flow_data_pa
     :param true_traj:
     :return:
     """
-    flow_data = read_flow_data(flow_data_path)
+    flow_data = torch.load(flow_data_path)[13:]
     print("flow shape: ", flow_data.shape, "ic shape: ", initial_condition.shape)
     flow_data[flow_data > 1e20] = 0
 
-    max_lat = initial_condition[2] + 5
-    min_lat = initial_condition[2] - 5
-    max_lon = initial_condition[3] + 5
-    min_lon = initial_condition[3] - 5
+    max_lat = initial_condition[2] + 4.5
+    min_lat = initial_condition[2] - 4.5
+    max_lon = initial_condition[3] + 4.5
+    min_lon = initial_condition[3] - 4.5
 
     max_lat_idx = np.argmin(flow_data[0, :, 0, 0] < max_lat)
     min_lat_idx = np.argmax(flow_data[0, :, 0, 0] > min_lat)
@@ -155,7 +157,7 @@ def eval_node_model_using_flow_field(model_path, initial_condition, flow_data_pa
         curr_state = Tensor(initial_condition).view(1, -1)
         curr_latlon = curr_state[:, -2:]
         pred_traj = [curr_latlon]
-        for j in tqdm.tqdm(range(112)):
+        for j in tqdm.tqdm(range(239)):
             next_state = node_model(curr_state, Tensor([0., 1.]), return_whole_sequence=True).squeeze()
             next_latlon = next_state[-1, -2:].unsqueeze(0)
             pred_traj.append(next_latlon)
@@ -215,14 +217,21 @@ if __name__ == '__main__':
     compare_trajs(true_traj[:, -2:], [pred_traj], ["KNODE"])
 
     """
-    drifter_id = 3
-    model_path = 'NODE/submission_models/drifter_' + str(drifter_id) + '_tanh_1day.pth'
-    true_traj_path = 'Data/training_data/submission_1day/train_data_nowcast_drifter_' + \
-                     str(drifter_id) + '_knn_10.npy'
-    true_traj = np.load(true_traj_path)
-    initial_condition = true_traj[-1]
-    flow_path = 'Data/flow/noaa_forecast_data_from_nov_22.npy'
-    pred_traj, _, first_hour = eval_node_model_using_flow_field(model_path, initial_condition,
-                                                                flow_path)
-    print("first hour to diverge from 32km: ", first_hour)
-    compare_trajs(true_traj[:, -2:], [pred_traj], ["KNODE"])
+    for _, drifter_id in enumerate([65]):
+        try:
+            model_path = 'NODE/submission_models/drifter_' + str(drifter_id) + '_tanh_1day.pth'
+            true_traj_path = 'Data/training_data/submission_1day/train_data_nowcast_drifter_' + \
+                             str(drifter_id) + '_knn_10.npy'
+            true_traj = np.load(true_traj_path)
+            initial_condition = true_traj[-1]
+            flow_path = 'Data/flow/submission_10day_hourly/forecast_8days_transformer_60hrs_predict.pth'
+            print("Predicting for drifter ", str(drifter_id), "...")
+            pred_traj, _, _ = eval_node_model_using_flow_field(model_path, initial_condition,
+                                                                        flow_path)
+            save_path = 'Data/predictions/submissions/pred_traj_drifter_' + str(drifter_id) + '.npy'
+            with open(save_path, 'wb') as f:
+                np.save(f, pred_traj)
+        except FileNotFoundError:
+            continue
+        #print("first hour to diverge from 32km: ", first_hour)
+        #compare_trajs(true_traj[:, -2:], [pred_traj], ["KNODE"])

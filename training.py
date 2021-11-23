@@ -90,8 +90,7 @@ def sample_and_grow(ode_train, traj_list, epochs, LR, lookahead, plot_freq=50,
 
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    for spot_id in range(93):
-        spot_id = spot_id+1
+    for _, spot_id in enumerate([65]):
         try:
             training_data_path_list = ["Data/training_data/submission_1day/train_data_nowcast_drifter_" + str(spot_id) +
                                        "_knn_10.npy"]
@@ -122,7 +121,7 @@ if __name__ == '__main__':
             val_loss_arr = []
             save_path = 'NODE/submission_models/drifter_' + str(spot_id) + '_tanh_1day.pth'
             BATCH_SKIP = 1
-            EPOCHs = 4000  # No. of epochs to optimize
+            EPOCHs = 2000  # No. of epochs to optimize
             LOOKAHEAD = 2  # alpha, the number of steps to lookahead
             name = "lookahead_" + str(LOOKAHEAD - 1)
             LR = 0.001  # optimization step size
