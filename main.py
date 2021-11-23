@@ -137,7 +137,7 @@ def generate_training_data_1day(drifter_id, k_neighbor, flow_data_path, flow_tim
 
     flow_data = flow_data_all
     flow_data_all[flow_data_all > 1e20] = 1e5
-    #flow_data[flow_data == 0] = 1e10
+    # flow_data[flow_data == 0] = 1e10
 
     max_lat_idx = np.argmin(flow_data_all[0, :, 0, 0] < max_lat)
     min_lat_idx = np.argmax(flow_data_all[0, :, 0, 0] > min_lat)
@@ -172,16 +172,18 @@ def generate_training_data_1day(drifter_id, k_neighbor, flow_data_path, flow_tim
         # print(drifter_location)
         # np.any(np.isnan(flow_data[i]))
         # np.all(np.isfinite(flow_data[i]))
-        recon_vel = knn_then_pca(drifter_location, flow_data[i], k_neighbor)
+        recon_vel = knn_then_pca(drifter_location, flow_data[i+24], k_neighbor)
         training_point = np.concatenate([recon_vel, drifter_location.reshape(-1)])
         training_data.append(training_point)
 
     training_data = np.array(training_data)
-    save_name = "Data/training_data/train_data_nowcast_drifter_" + str(drifter_id) + "_knn_" + str(k_neighbor) + ".npy"
+    save_name = "Data/training_data/submission_1day/train_data_nowcast_drifter_" + str(drifter_id) + "_knn_" + str(
+        k_neighbor) + ".npy"
     with open(save_name, 'wb') as f:
         np.save(f, training_data)
 
     return training_data
+
 
 def generate_training_data_3day(drifter_id, k_neighbor, flow_data_path, flow_time_path):
     """
@@ -210,7 +212,7 @@ def generate_training_data_3day(drifter_id, k_neighbor, flow_data_path, flow_tim
 
     flow_data = flow_data_all
     flow_data_all[flow_data_all > 1e20] = 1e5
-    #flow_data[flow_data == 0] = 1e10
+    # flow_data[flow_data == 0] = 1e10
 
     max_lat_idx = np.argmin(flow_data_all[0, :, 0, 0] < max_lat)
     min_lat_idx = np.argmax(flow_data_all[0, :, 0, 0] > min_lat)
@@ -238,18 +240,22 @@ def generate_training_data_3day(drifter_id, k_neighbor, flow_data_path, flow_tim
             break
 
         recon_vel0 = knn_then_pca(drifter_location, flow_data[i], k_neighbor)
-        recon_vel1 = knn_then_pca(drifter_location, flow_data[i], k_neighbor) if i == 0 else knn_then_pca(drifter_location, flow_data[i-1], k_neighbor)
-        recon_vel2 = knn_then_pca(drifter_location, flow_data[i], k_neighbor) if i == len(flow_data)-1 else knn_then_pca(drifter_location, flow_data[i+1], k_neighbor)
+        recon_vel1 = knn_then_pca(drifter_location, flow_data[i], k_neighbor) if i == 0 else knn_then_pca(
+            drifter_location, flow_data[i - 1], k_neighbor)
+        recon_vel2 = knn_then_pca(drifter_location, flow_data[i], k_neighbor) if i == len(
+            flow_data) - 1 else knn_then_pca(drifter_location, flow_data[i + 1], k_neighbor)
         training_point = np.concatenate([recon_vel0, recon_vel1, recon_vel2, drifter_location.reshape(-1)])
         training_data.append(training_point)
 
     training_data = np.array(training_data)
 
-    save_name = "Data/training_data/with_3days_flow/train_data_nowcast_drifter_" + str(drifter_id) + "_knn_" + str(k_neighbor) + ".npy"
+    save_name = "Data/training_data/submission_1day/train_data_nowcast_drifter_" + str(drifter_id) + "_knn_" + str(
+        k_neighbor) + ".npy"
     with open(save_name, 'wb') as f:
         np.save(f, training_data)
 
     return training_data
+
 
 if __name__ == "__main__":
     '''
@@ -271,14 +277,13 @@ if __name__ == "__main__":
     drifter_id = 0
     k_neighbor = 10
     start_day = 1
-    flow_data_path = "Data/flow/noaa_nowcast_data_nov_2_to_nov_19.npy"
-    flow_time_path = "Data/flow/noaa_nowcast_times_nov_2_to_nov_19.npy"
+    flow_data_path = "Data/flow/noaa_nowcast_data_nov_2_to_nov_22.npy"
+    flow_time_path = "Data/flow/noaa_nowcast_times_nov_2_to_nov_22.npy"
     drifter_ids = np.arange(93)  # all drifter ids
     for _, drifter_id in enumerate(drifter_ids):
         print("processing drifter:", drifter_id)
         try:
-            training_data = generate_training_data_3day(drifter_id, k_neighbor, flow_data_path, flow_time_path)
+            training_data = generate_training_data_1day(drifter_id, k_neighbor, flow_data_path, flow_time_path)
         except:
             continue
     # true_traj, pred_traj = predict_with_whole_field(drifter_id, k_neighbor, start_day, flow_data_path, flow_time_path)
-

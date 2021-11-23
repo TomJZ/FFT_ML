@@ -87,8 +87,8 @@ def compare_trajs(true_traj, pred_traj_ls=None, pred_label_ls=None, plot_lim=Non
     assert(len(pred_traj_ls) == len(pred_label_ls))
     fig = plt.figure(figsize=(10, 5))
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(true_traj[:, 1], true_traj[:, 0], label='true traj',
-            c='black', marker='x')  # true time series path of a drifter
+    ax.plot(true_traj[:, 1], true_traj[:, 0], label='true test traj',
+            c='black', marker='.')  # true time series path of a drifter
     if pred_traj_ls is not None:
         for i, pred_traj in enumerate(pred_traj_ls):
             ax.plot(pred_traj[:, 1], pred_traj[:, 0],
@@ -147,8 +147,8 @@ def visualize_training_data(training_traj, flow_data_path):
 
 
 if __name__ == '__main__':
-    training_data = np.load('../Data/training_data/train_data_nowcast_drifter_1_knn_10.npy')
-    flow_data_path = "../Data/flow/noaa_nowcast_data_nov_2_to_nov_19.npy"
+    training_data = np.load('../Data/training_data/submission_1day/train_data_nowcast_drifter_0_knn_10.npy')
+    flow_data_path = "../Data/flow/noaa_nowcast_data_nov_2_to_nov_22.npy"
     visualize_training_data(training_data, flow_data_path)
     print(training_data.shape)
 

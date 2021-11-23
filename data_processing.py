@@ -16,7 +16,7 @@ def read_all_drifter_data():
     drifter_data_all = []
     drifter_time_all = []
     root_path = 'Data/drifter/day'
-    for i in range(17):
+    for i in range(20):
         path = root_path + str(i + 1) + '_pos.npz'
         with np.load(path, allow_pickle=True) as data:
             a = data['pos']
