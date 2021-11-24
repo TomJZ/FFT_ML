@@ -1,0 +1,7 @@
+data/npz_data/
+data/
+PredictionTensor/
+/experiments
+VFAnim/
+Metrics/
+drifter_data/
